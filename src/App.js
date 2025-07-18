@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from 'firebase/firestore'; // Removed orderBy
 
 // Global variables provided by the Canvas environment (with local fallbacks)
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -36,7 +36,7 @@ function App() {
     // Only initialize if firebaseConfig has an apiKey (meaning it's properly set up)
     if (!firebaseConfig.apiKey) {
       console.error("Firebase config is missing. Please provide your Firebase config for local development.");
-      setMessage("Firebase not configured for local development. Check console.");
+      setMessage("Firebase not configured for local development. Check console for details.");
       return;
     }
 
@@ -46,7 +46,7 @@ function App() {
       const authentication = getAuth(app);
 
       setDb(firestore);
-      setAuth(authentication);
+      setAuth(authentication); // Keep this assignment, 'auth' state is used
 
       // Listen for auth state changes
       const unsubscribe = onAuthStateChanged(authentication, async (user) => {
@@ -80,7 +80,7 @@ function App() {
       console.error("Error initializing Firebase:", error);
       setMessage("Failed to initialize Firebase. Check console for details.");
     }
-  }, [initialAuthToken]); // Added initialAuthToken to dependency array
+  }, []); // Removed initialAuthToken from dependency array
 
   // Fetch alerts when Firebase is ready
   useEffect(() => {
@@ -105,7 +105,7 @@ function App() {
 
       return () => unsubscribe(); // Clean up snapshot listener
     }
-  }, [db, isAuthReady, appId]);
+  }, [db, isAuthReady, appId]); // Keep these dependencies as they are necessary
 
   const handleSubmitAlert = async (e) => {
     e.preventDefault();
