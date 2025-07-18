@@ -1,0 +1,7 @@
+cd C:\Users\nduat\security-alerts
+git init
+git add .
+git commit -m "Initial project setup with React and Netlify Functions"
+git branch -M main
+git remote add origin YOUR_GIT_REPOSITORY_URL # Replace with your actual repo URL
+git push -u origin main
