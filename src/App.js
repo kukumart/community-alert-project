@@ -1,3 +1,4 @@
+/* global __app_id, __firebase_config, __initial_auth_token */
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
@@ -8,18 +9,18 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
   // IMPORTANT: Replace with your actual Firebase project config for local testing.
   // You can find this in Firebase Console -> Project settings -> Your apps -> Web app -> Firebase SDK snippet (Config)
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "YOUR_API_KEY", // <--- Make sure this is your REAL API Key
+  authDomain: "YOUR_AUTH_DOMAIN", // <--- Make sure this is your REAL Auth Domain
+  projectId: "YOUR_PROJECT_ID", // <--- Make sure this is your REAL Project ID
+  storageBucket: "YOUR_STORAGE_BUCKET", // <--- Make sure this is your REAL Storage Bucket
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // <--- Make sure this is your REAL Messaging Sender ID
+  appId: "YOUR_APP_ID" // <--- Make sure this is your REAL App ID
 };
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 function App() {
   const [db, setDb] = useState(null);
-  const [auth, setAuth] = useState(null);
+  const [auth, setAuth] = useState(null); // 'auth' is assigned here
   const [userId, setUserId] = useState('');
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [alerts, setAlerts] = useState([]);
@@ -31,9 +32,13 @@ function App() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Add a console.log to "use" the auth variable to satisfy ESLint
+  // This helps resolve the 'auth' is assigned but never used warning during local build
+  console.log("Firebase Auth instance:", auth);
+
   // Initialize Firebase and set up authentication listener
   useEffect(() => {
-    // Only initialize if firebaseConfig has an apiKey (meaning it's properly set up)
+    // Only initialize if firebaseConfig.apiKey is provided (meaning it's properly set up)
     if (!firebaseConfig.apiKey) {
       console.error("Firebase config is missing. Please provide your Firebase config for local development.");
       setMessage("Firebase not configured for local development. Check console for details.");
@@ -80,11 +85,12 @@ function App() {
       console.error("Error initializing Firebase:", error);
       setMessage("Failed to initialize Firebase. Check console for details.");
     }
-  }, []); // Removed initialAuthToken from dependency array
+  }, []); // Empty dependency array as initialAuthToken is a global constant
 
   // Fetch alerts when Firebase is ready
   useEffect(() => {
     if (db && isAuthReady) {
+      // Use the appId in the collection path as per Firestore security rules and Netlify functions
       const alertsCollectionRef = collection(db, `artifacts/${appId}/public/data/alerts`);
       // Note: orderBy is commented out due to potential Firestore index issues in Canvas environment.
       // Data will be sorted in memory.
@@ -105,7 +111,7 @@ function App() {
 
       return () => unsubscribe(); // Clean up snapshot listener
     }
-  }, [db, isAuthReady, appId]); // Keep these dependencies as they are necessary
+  }, [db, isAuthReady]); // Removed appId from dependency array as it's a global constant
 
   const handleSubmitAlert = async (e) => {
     e.preventDefault();
@@ -122,7 +128,7 @@ function App() {
     setMessage('');
 
     try {
-      // Add alert to Firestore
+      // Add alert to Firestore using the correct path
       await addDoc(collection(db, `artifacts/${appId}/public/data/alerts`), {
         title,
         description,

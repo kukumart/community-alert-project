@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public data for the security alert system
+    // Allows any authenticated user (including anonymous) to read and write alerts
+    match /artifacts/{appId}/public/data/alerts/{documentId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Default rule for private user data (if you expand later)
+    match /artifacts/{appId}/users/{userId}/{documents=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+
