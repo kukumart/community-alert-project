@@ -1,5 +1,5 @@
 /* global __app_id, __firebase_config, __initial_auth_token */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // Corrected: '=>' changed to 'from'
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from 'firebase/firestore'; // Removed orderBy
