@@ -7,14 +7,14 @@ import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } 
 // Global variables provided by the Canvas environment (with local fallbacks)
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-  // IMPORTANT: Replace with your actual Firebase project config for local testing.
-  // You can find this in Firebase Console -> Project settings -> Your apps -> Web app -> Firebase SDK snippet (Config)
-  apiKey: "YOUR_API_KEY", // <--- Make sure this is your REAL API Key
-  authDomain: "YOUR_AUTH_DOMAIN", // <--- Make sure this is your REAL Auth Domain
-  projectId: "YOUR_PROJECT_ID", // <--- Make sure this is your REAL Project ID
-  storageBucket: "YOUR_STORAGE_BUCKET", // <--- Make sure this is your REAL Storage Bucket
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // <--- Make sure this is your REAL Messaging Sender ID
-  appId: "YOUR_APP_ID" // <--- Make sure this is your REAL App ID
+  // YOUR ACTUAL FIREBASE WEB APP CONFIGURATION
+  apiKey: "AIzaSyDclKByULL5nr7kg6ehY93XJpz2Xhb7UQw",
+  authDomain: "poultry-pp.firebaseapp.com",
+  projectId: "poultry-pp",
+  storageBucket: "poultry-pp.firebasestorage.app",
+  messagingSenderId: "477596536782",
+  appId: "1:477596536782:web:eb280613be9c9748f8a59f",
+  measurementId: "G-H38RJ92M6M"
 };
 const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
@@ -31,16 +31,14 @@ function App() {
   const [severity, setSeverity] = useState('Low');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [geminiInsights, setGeminiInsights] = useState({}); // New state for storing Gemini insights
+  const [loadingInsight, setLoadingInsight] = useState({}); // New state for per-insight loading
 
   // Initialize Firebase and set up authentication listener
   useEffect(() => {
     console.log("App.js: Initializing Firebase...");
-    if (!firebaseConfig || !firebaseConfig.apiKey) {
-      console.error("App.js: Firebase config is missing or invalid. Please provide your Firebase config for local development.");
-      setMessage("Firebase not configured. Check browser console for details.");
-      return;
-    }
-
+    // Removed the placeholder check as actual config is provided now
+    
     try {
       const app = initializeApp(firebaseConfig);
       const firestore = getFirestore(app);
@@ -131,7 +129,11 @@ function App() {
     console.log("App.js: Submitting alert to Netlify function...");
 
     try {
-      const response = await fetch('/.netlify/functions/submit-alert', {
+      // Construct the absolute URL for the Netlify function
+      const functionUrl = `${window.location.origin}/.netlify/functions/submit-alert`;
+      console.log("App.js: Fetching function at URL:", functionUrl);
+
+      const response = await fetch(functionUrl, { // Changed URL to absolute path
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -158,6 +160,40 @@ function App() {
       setMessage("An unexpected error occurred. Check browser console for details.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // New function to handle getting Gemini Insight
+  const handleGetGeminiInsight = async (alertId, alertTitle, alertDescription) => {
+    setLoadingInsight(prev => ({ ...prev, [alertId]: true }));
+    setMessage(''); // Clear any general messages
+
+    try {
+      const functionUrl = `${window.location.origin}/.netlify/functions/gemini-insight`;
+      console.log(`App.js: Requesting Gemini insight for alert ${alertId} at URL:`, functionUrl);
+
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: alertTitle, description: alertDescription }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setGeminiInsights(prev => ({ ...prev, [alertId]: result.insight }));
+        console.log(`App.js: Gemini insight received for alert ${alertId}.`);
+      } else {
+        console.error("App.js: Error from Gemini Insight function:", result.error || result);
+        setMessage(result.error || "Failed to get Gemini insight.");
+      }
+    } catch (error) {
+      console.error("App.js: Network or unexpected error getting Gemini insight:", error);
+      setMessage("An unexpected error occurred while getting Gemini insight. Check browser console.");
+    } finally {
+      setLoadingInsight(prev => ({ ...prev, [alertId]: false }));
     }
   };
 
@@ -298,6 +334,20 @@ function App() {
                       <p><strong>Time:</strong> {new Date(alert.timestamp.toDate()).toLocaleString()}</p>
                     )}
                   </div>
+                  {/* New Gemini Insight Button and Display */}
+                  <button
+                    onClick={() => handleGetGeminiInsight(alert.id, alert.title, alert.description)}
+                    className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-semibold hover:bg-purple-700 transition duration-200 ease-in-out shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={loadingInsight[alert.id]}
+                  >
+                    {loadingInsight[alert.id] ? 'Generating Insight...' : '✨ Get Gemini Insight'}
+                  </button>
+                  {geminiInsights[alert.id] && (
+                    <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
+                      <h4 className="font-semibold mb-1">Gemini Insight:</h4>
+                      <p className="whitespace-pre-wrap">{geminiInsights[alert.id]}</p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
