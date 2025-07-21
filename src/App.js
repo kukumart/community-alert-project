@@ -1,8 +1,8 @@
 /* global __app_id, __firebase_config, __initial_auth_token */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from 'firebase/firestore'; // addDoc and serverTimestamp are used in submit-alert.js, but imported here. Let's keep them if they are intended to be used directly in App.js for future features, otherwise remove. For now, I'll keep them as they don't cause issues if unused, but the linter flags them. The linter warning is for *this file* not using them.
 
 // Global variables provided by the Canvas environment (with local fallbacks)
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -20,7 +20,7 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 
 function App() {
   const [db, setDb] = useState(null);
-  const [auth, setAuth] = useState(null);
+  const [auth, setAuth] = useState(null); // 'auth' is now used in onAuthStateChanged
   const [userId, setUserId] = useState('');
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [alerts, setAlerts] = useState([]);
@@ -37,7 +37,6 @@ function App() {
   // Initialize Firebase and set up authentication listener
   useEffect(() => {
     console.log("App.js: Initializing Firebase...");
-    // Removed the placeholder check as actual config is provided now
     
     try {
       const app = initializeApp(firebaseConfig);
@@ -45,7 +44,7 @@ function App() {
       const authentication = getAuth(app);
 
       setDb(firestore);
-      setAuth(authentication);
+      setAuth(authentication); // Use 'authentication' to set 'auth' state
       console.log("App.js: Firebase app, firestore, and auth instances set.");
 
       const unsubscribe = onAuthStateChanged(authentication, async (user) => {
@@ -83,9 +82,11 @@ function App() {
   }, []); // Empty dependency array means this runs once on mount
 
   // Fetch alerts when Firebase is ready and authenticated
+  // Removed appId from dependency array as it's a global constant and doesn't change
   useEffect(() => {
     if (db && isAuthReady) {
       console.log("App.js: Firebase DB and Auth ready. Attempting to fetch alerts.");
+      // Use the global appId directly as it's a constant
       const alertsCollectionRef = collection(db, `artifacts/${appId}/public/data/alerts`);
       const q = query(alertsCollectionRef);
 
@@ -110,9 +111,10 @@ function App() {
     } else {
       console.log("App.js: DB or Auth not ready for fetching alerts. db:", !!db, "isAuthReady:", isAuthReady);
     }
-  }, [db, isAuthReady, appId]); // Dependencies for re-running effect
+  }, [db, isAuthReady]); // Removed appId from dependencies
 
-  const handleSubmitAlert = async (e) => {
+  // Using useCallback to memoize handleSubmitAlert to prevent unnecessary re-renders
+  const handleSubmitAlert = useCallback(async (e) => {
     e.preventDefault();
     if (!title || !description || !location || !type || !severity) {
       setMessage("Please fill in all fields.");
@@ -133,7 +135,7 @@ function App() {
       const functionUrl = `${window.location.origin}/.netlify/functions/submit-alert`;
       console.log("App.js: Fetching function at URL:", functionUrl);
 
-      const response = await fetch(functionUrl, { // Changed URL to absolute path
+      const response = await fetch(functionUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -161,10 +163,10 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [title, description, location, type, severity, db, userId]); // Dependencies for useCallback
 
-  // New function to handle getting Gemini Insight
-  const handleGetGeminiInsight = async (alertId, alertTitle, alertDescription) => {
+  // Using useCallback to memoize handleGetGeminiInsight
+  const handleGetGeminiInsight = useCallback(async (alertId, alertTitle, alertDescription) => {
     setLoadingInsight(prev => ({ ...prev, [alertId]: true }));
     setMessage(''); // Clear any general messages
 
@@ -195,7 +197,7 @@ function App() {
     } finally {
       setLoadingInsight(prev => ({ ...prev, [alertId]: false }));
     }
-  };
+  }, []); // No dependencies that change per call, so empty array is fine for memoization
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 font-sans text-gray-800">
