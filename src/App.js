@@ -20,7 +20,7 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 
 function App() {
   const [db, setDb] = useState(null);
-  const [auth, setAuth] = useState(null); // 'auth' is now used in onAuthStateChanged
+  const [auth, setAuth] = useState(null);
   const [userId, setUserId] = useState('');
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [alerts, setAlerts] = useState([]);
@@ -44,7 +44,7 @@ function App() {
       const authentication = getAuth(app);
 
       setDb(firestore);
-      setAuth(authentication); // Use 'authentication' to set 'auth' state
+      setAuth(authentication);
       console.log("App.js: Firebase app, firestore, and auth instances set.");
 
       const unsubscribe = onAuthStateChanged(authentication, async (user) => {
@@ -83,11 +83,8 @@ function App() {
 
   // Fetch alerts when Firebase is ready and authenticated
   useEffect(() => {
-    // Explicitly use 'auth' here to satisfy the linter's 'no-unused-vars' rule for the 'auth' state variable.
-    // It also ensures that Firestore operations only proceed when the auth instance is fully available.
-    if (db && isAuthReady && auth) { 
+    if (db && isAuthReady && auth) {
       console.log("App.js: Firebase DB and Auth ready. Attempting to fetch alerts.");
-      // Use the global appId directly as it's a constant
       const alertsCollectionRef = collection(db, `artifacts/${appId}/public/data/alerts`);
       const q = query(alertsCollectionRef);
 
@@ -112,9 +109,8 @@ function App() {
     } else {
       console.log("App.js: DB or Auth not ready for fetching alerts. db:", !!db, "isAuthReady:", isAuthReady, "auth:", !!auth);
     }
-  }, [db, isAuthReady, auth]); // Added 'auth' to dependencies
+  }, [db, isAuthReady, auth]);
 
-  // Using useCallback to memoize handleSubmitAlert to prevent unnecessary re-renders
   const handleSubmitAlert = useCallback(async (e) => {
     e.preventDefault();
     if (!title || !description || !location || !type || !severity) {
@@ -132,7 +128,6 @@ function App() {
     console.log("App.js: Submitting alert to Netlify function...");
 
     try {
-      // Construct the absolute URL for the Netlify function
       const functionUrl = `${window.location.origin}/.netlify/functions/submit-alert`;
       console.log("App.js: Fetching function at URL:", functionUrl);
 
@@ -164,12 +159,11 @@ function App() {
     } finally {
       setLoading(false);
     }
-  }, [title, description, location, type, severity, db, userId]); // Dependencies for useCallback
+  }, [title, description, location, type, severity, db, userId]);
 
-  // Using useCallback to memoize handleGetGeminiInsight
   const handleGetGeminiInsight = useCallback(async (alertId, alertTitle, alertDescription) => {
     setLoadingInsight(prev => ({ ...prev, [alertId]: true }));
-    setMessage(''); // Clear any general messages
+    setMessage('');
 
     try {
       const functionUrl = `${window.location.origin}/.netlify/functions/gemini-insight`;
@@ -198,80 +192,80 @@ function App() {
     } finally {
       setLoadingInsight(prev => ({ ...prev, [alertId]: false }));
     }
-  }, []); // No dependencies that change per call, so empty array is fine for memoization
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 font-sans text-gray-800">
-      <div className="max-w-4xl mx-auto bg-white shadow-xl rounded-xl p-6 md:p-8">
-        <h1 className="text-4xl font-extrabold text-center text-indigo-700 mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 font-sans text-gray-800 flex items-center justify-center">
+      <div className="max-w-4xl w-full mx-auto bg-white shadow-2xl rounded-3xl p-6 md:p-10 border border-indigo-200">
+        <h1 className="text-5xl font-extrabold text-center text-indigo-800 mb-10 drop-shadow-md">
           Community Security Alert System
         </h1>
 
         {userId && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-            <p className="font-semibold">Your User ID:</p>
-            <p className="break-all">{userId}</p>
-            <p className="mt-2 text-xs">Share this ID if you want others to identify your alerts.</p>
+          <div className="mb-8 p-5 bg-blue-50 border border-blue-300 rounded-xl text-base text-blue-800 shadow-inner">
+            <p className="font-semibold text-lg mb-2">Your User ID:</p>
+            <p className="break-all font-mono text-blue-700 bg-blue-100 p-2 rounded-lg select-all">{userId}</p>
+            <p className="mt-3 text-sm text-blue-600">Share this ID if you want others to identify your alerts or for collaborative features.</p>
           </div>
         )}
 
         {message && (
-          <div className={`mb-4 p-3 rounded-lg text-center ${message.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+          <div className={`mb-6 p-4 rounded-xl text-center font-medium shadow-md ${message.includes('success') ? 'bg-green-100 text-green-800 border border-green-300' : 'bg-red-100 text-red-800 border border-red-300'}`}>
             {message}
           </div>
         )}
 
         {/* Alert Submission Form */}
-        <div className="mb-10 p-6 bg-indigo-50 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-indigo-600 mb-5">Submit a New Alert</h2>
-          <form onSubmit={handleSubmitAlert} className="space-y-4">
+        <div className="mb-12 p-8 bg-indigo-50 rounded-2xl shadow-lg border border-indigo-200">
+          <h2 className="text-3xl font-bold text-indigo-700 mb-6 text-center">Submit a New Alert</h2>
+          <form onSubmit={handleSubmitAlert} className="space-y-6">
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="title" className="block text-lg font-medium text-gray-700 mb-2">
                 Alert Title
               </label>
               <input
                 type="text"
                 id="title"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-150 ease-in-out"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="description" className="block text-lg font-medium text-gray-700 mb-2">
                 Description
               </label>
               <textarea
                 id="description"
-                rows="4"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                rows="5"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-150 ease-in-out"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 required
               ></textarea>
             </div>
             <div>
-              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="location" className="block text-lg font-medium text-gray-700 mb-2">
                 Location (e.g., Street, City, Landmark)
               </label>
               <input
                 type="text"
                 id="location"
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-150 ease-in-out"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 required
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="type" className="block text-lg font-medium text-gray-700 mb-2">
                   Type of Incident
                 </label>
                 <select
                   id="type"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-150 ease-in-out bg-white"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
                 >
@@ -282,12 +276,12 @@ function App() {
                 </select>
               </div>
               <div>
-                <label htmlFor="severity" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="severity" className="block text-lg font-medium text-gray-700 mb-2">
                   Severity
                 </label>
                 <select
                   id="severity"
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition duration-150 ease-in-out bg-white"
                   value={severity}
                   onChange={(e) => setSeverity(e.target.value)}
                 >
@@ -300,7 +294,7 @@ function App() {
             </div>
             <button
               type="submit"
-              className="w-full bg-indigo-600 text-white p-3 rounded-md font-semibold hover:bg-indigo-700 transition duration-200 ease-in-out shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-indigo-600 to-purple-700 text-white p-4 rounded-xl font-bold text-xl hover:from-indigo-700 hover:to-purple-800 transition duration-300 ease-in-out shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               disabled={loading}
             >
               {loading ? 'Submitting...' : 'Submit Alert'}
@@ -309,46 +303,46 @@ function App() {
         </div>
 
         {/* Alert List */}
-        <div className="p-6 bg-gray-50 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-gray-700 mb-5">Recent Alerts</h2>
+        <div className="p-8 bg-gray-50 rounded-2xl shadow-lg border border-gray-200">
+          <h2 className="text-3xl font-bold text-gray-700 mb-6 text-center">Recent Alerts</h2>
           {alerts.length === 0 ? (
-            <p className="text-center text-gray-500">No alerts yet. Be the first to submit one!</p>
+            <p className="text-center text-gray-500 text-lg py-4">No alerts yet. Be the first to submit one!</p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {alerts.map((alert) => (
-                <div key={alert.id} className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                  <h3 className="text-xl font-semibold text-indigo-600 mb-2">{alert.title}</h3>
-                  <p className="text-gray-700 mb-2">{alert.description}</p>
-                  <div className="text-sm text-gray-500 space-y-1">
-                    <p><strong>Location:</strong> {alert.location}</p>
-                    <p><strong>Type:</strong> <span className="font-medium text-indigo-500">{alert.type}</span></p>
+                <div key={alert.id} className="bg-white p-6 rounded-xl shadow-md border border-gray-200 transform hover:scale-[1.01] transition duration-200 ease-in-out">
+                  <h3 className="text-2xl font-semibold text-indigo-700 mb-3">{alert.title}</h3>
+                  <p className="text-gray-800 mb-3 leading-relaxed">{alert.description}</p>
+                  <div className="text-base text-gray-600 space-y-2">
+                    <p><strong>Location:</strong> <span className="text-gray-700">{alert.location}</span></p>
+                    <p><strong>Type:</strong> <span className="font-medium text-indigo-600">{alert.type}</span></p>
                     <p><strong>Severity:</strong>
-                      <span className={`font-bold ml-1 ${
-                        alert.severity === 'Low' ? 'text-green-500' :
-                        alert.severity === 'Medium' ? 'text-yellow-600' :
-                        alert.severity === 'High' ? 'text-orange-600' :
-                        'text-red-600'
+                      <span className={`font-bold ml-2 px-3 py-1 rounded-full text-white ${
+                        alert.severity === 'Low' ? 'bg-green-500' :
+                        alert.severity === 'Medium' ? 'bg-yellow-600' :
+                        alert.severity === 'High' ? 'bg-orange-600' :
+                        'bg-red-600'
                       }`}>
                         {alert.severity}
                       </span>
                     </p>
-                    <p><strong>Reported by:</strong> <span className="break-all">{alert.userId}</span></p>
+                    <p><strong>Reported by:</strong> <span className="break-all font-mono text-gray-700">{alert.userId}</span></p>
                     {alert.timestamp && (
-                      <p><strong>Time:</strong> {new Date(alert.timestamp.toDate()).toLocaleString()}</p>
+                      <p><strong>Time:</strong> <span className="text-gray-700">{new Date(alert.timestamp.toDate()).toLocaleString()}</span></p>
                     )}
                   </div>
                   {/* New Gemini Insight Button and Display */}
                   <button
                     onClick={() => handleGetGeminiInsight(alert.id, alert.title, alert.description)}
-                    className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-md text-sm font-semibold hover:bg-purple-700 transition duration-200 ease-in-out shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-5 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl text-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition duration-300 ease-in-out shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     disabled={loadingInsight[alert.id]}
                   >
                     {loadingInsight[alert.id] ? 'Generating Insight...' : '✨ Get Gemini Insight'}
                   </button>
                   {geminiInsights[alert.id] && (
-                    <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-lg text-sm text-purple-800">
-                      <h4 className="font-semibold mb-1">Gemini Insight:</h4>
-                      <p className="whitespace-pre-wrap">{geminiInsights[alert.id]}</p>
+                    <div className="mt-4 p-5 bg-purple-100 border border-purple-300 rounded-xl text-base text-purple-900 shadow-inner">
+                      <h4 className="font-bold text-lg mb-2 text-purple-800">Gemini Insight:</h4>
+                      <p className="whitespace-pre-wrap leading-relaxed">{geminiInsights[alert.id]}</p>
                     </div>
                   )}
                 </div>
