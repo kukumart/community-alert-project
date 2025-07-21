@@ -66,7 +66,7 @@ exports.handler = async (event, context) => {
     // You might want to send notifications only for 'High' or 'Critical' severity alerts
     if (severity === 'High' || severity === 'Critical') {
       // Using actual emoji for clarity, assuming correct file encoding
-      const messageBody = `?? New Security Alert: ${title}\nLocation: ${location}\nSeverity: ${severity}\nDescription: ${description.substring(0, Math.min(description.length, 100))}...`;
+      const messageBody = `🚨 New Security Alert: ${title}\nLocation: ${location}\nSeverity: ${severity}\nDescription: ${description.substring(0, Math.min(description.length, 100))}...`;
 
       // Example for Twilio (adjust for your chosen provider)
       if (WHATSAPP_API_URL && WHATSAPP_ACCOUNT_SID && WHATSAPP_AUTH_TOKEN && WHATSAPP_FROM_NUMBER && WHATSAPP_TO_NUMBER) {

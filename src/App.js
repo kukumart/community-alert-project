@@ -1,8 +1,8 @@
 /* global __app_id, __firebase_config, __initial_auth_token */
-import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
+import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from 'firebase/firestore'; // addDoc and serverTimestamp are used in submit-alert.js, but imported here. Let's keep them if they are intended to be used directly in App.js for future features, otherwise remove. For now, I'll keep them as they don't cause issues if unused, but the linter flags them. The linter warning is for *this file* not using them.
+import { getFirestore, collection, query, onSnapshot } from 'firebase/firestore'; // Removed addDoc and serverTimestamp
 
 // Global variables provided by the Canvas environment (with local fallbacks)
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -82,7 +82,6 @@ function App() {
   }, []); // Empty dependency array means this runs once on mount
 
   // Fetch alerts when Firebase is ready and authenticated
-  // Removed appId from dependency array as it's a global constant and doesn't change
   useEffect(() => {
     if (db && isAuthReady) {
       console.log("App.js: Firebase DB and Auth ready. Attempting to fetch alerts.");
