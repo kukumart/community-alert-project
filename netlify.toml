@@ -1,7 +1,12 @@
-    [build]
-      command = "npm run build"
-      publish = "build" # For Create React App; if you used Vite, change this to "dist"
+ [build]
+  command = "npm run build"
+  publish = "build"
 
-    [functions]
-      directory = "netlify/functions"
-      node_bundler = "esbuild" # Recommended for faster builds
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+  # Mark specific firebase-admin sub-modules as external for esbuild
+  external_node_modules = [
+    "firebase-admin/app",
+    "firebase-admin/firestore"
+  ]

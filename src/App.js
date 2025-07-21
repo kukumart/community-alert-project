@@ -1,8 +1,8 @@
 /* global __app_id, __firebase_config, __initial_auth_token */
-import React, { useState, useEffect } from 'react'; // Corrected: '=>' changed to 'from'
+import React, { useState, useEffect } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from 'firebase/firestore'; // Removed orderBy
+import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp } from 'firebase/firestore';
 
 // Global variables provided by the Canvas environment (with local fallbacks)
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -20,28 +20,24 @@ const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial
 
 function App() {
   const [db, setDb] = useState(null);
-  const [auth, setAuth] = useState(null); // 'auth' is assigned here
+  const [auth, setAuth] = useState(null);
   const [userId, setUserId] = useState('');
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [alerts, setAlerts] = useState([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
-  const [type, setType] = useState('Physical'); // Default type
-  const [severity, setSeverity] = useState('Low'); // Default severity
+  const [type, setType] = useState('Physical');
+  const [severity, setSeverity] = useState('Low');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Add a console.log to "use" the auth variable to satisfy ESLint
-  // This helps resolve the 'auth' is assigned but never used warning during local build
-  console.log("Firebase Auth instance:", auth);
-
   // Initialize Firebase and set up authentication listener
   useEffect(() => {
-    // Only initialize if firebaseConfig.apiKey is provided (meaning it's properly set up)
-    if (!firebaseConfig.apiKey) {
-      console.error("Firebase config is missing. Please provide your Firebase config for local development.");
-      setMessage("Firebase not configured for local development. Check console for details.");
+    console.log("App.js: Initializing Firebase...");
+    if (!firebaseConfig || !firebaseConfig.apiKey) {
+      console.error("App.js: Firebase config is missing or invalid. Please provide your Firebase config for local development.");
+      setMessage("Firebase not configured. Check browser console for details.");
       return;
     }
 
@@ -51,67 +47,72 @@ function App() {
       const authentication = getAuth(app);
 
       setDb(firestore);
-      setAuth(authentication); // Keep this assignment, 'auth' state is used
+      setAuth(authentication);
+      console.log("App.js: Firebase app, firestore, and auth instances set.");
 
-      // Listen for auth state changes
       const unsubscribe = onAuthStateChanged(authentication, async (user) => {
         if (user) {
+          console.log("App.js: onAuthStateChanged - User logged in:", user.uid);
           setUserId(user.uid);
-          setIsAuthReady(true);
         } else {
-          // Sign in anonymously if no user is found and no initial token is provided
-          if (!initialAuthToken) {
+          console.log("App.js: onAuthStateChanged - No user, attempting anonymous sign-in or custom token sign-in.");
+          if (initialAuthToken) {
+            try {
+              await signInWithCustomToken(authentication, initialAuthToken);
+              console.log("App.js: Signed in with custom token.");
+            } catch (error) {
+              console.error("App.js: Error signing in with custom token:", error);
+              await signInAnonymously(authentication); // Fallback to anonymous
+              console.log("App.js: Signed in anonymously after custom token failure.");
+            }
+          } else {
             await signInAnonymously(authentication);
+            console.log("App.js: Signed in anonymously.");
           }
-          setIsAuthReady(true); // Mark auth as ready even if anonymous
         }
+        setIsAuthReady(true); // Mark auth as ready after initial check/sign-in attempt
+        console.log("App.js: Authentication state ready. isAuthReady set to true.");
       });
 
-      // Use the initial custom auth token if available
-      if (initialAuthToken) {
-        signInWithCustomToken(authentication, initialAuthToken)
-          .then(() => {
-            console.log("Signed in with custom token.");
-          })
-          .catch((error) => {
-            console.error("Error signing in with custom token:", error);
-            // Fallback to anonymous if custom token fails
-            signInAnonymously(authentication);
-          });
-      }
-
-      return () => unsubscribe(); // Clean up auth listener on unmount
+      return () => {
+        console.log("App.js: Cleaning up auth state listener.");
+        unsubscribe();
+      };
     } catch (error) {
-      console.error("Error initializing Firebase:", error);
-      setMessage("Failed to initialize Firebase. Check console for details.");
+      console.error("App.js: Error initializing Firebase:", error);
+      setMessage("Failed to initialize Firebase. Check browser console for details.");
     }
-  }, []); // Empty dependency array as initialAuthToken is a global constant
+  }, []); // Empty dependency array means this runs once on mount
 
-  // Fetch alerts when Firebase is ready
+  // Fetch alerts when Firebase is ready and authenticated
   useEffect(() => {
     if (db && isAuthReady) {
-      // Use the appId in the collection path as per Firestore security rules and Netlify functions
+      console.log("App.js: Firebase DB and Auth ready. Attempting to fetch alerts.");
       const alertsCollectionRef = collection(db, `artifacts/${appId}/public/data/alerts`);
-      // Note: orderBy is commented out due to potential Firestore index issues in Canvas environment.
-      // Data will be sorted in memory.
-      const q = query(alertsCollectionRef /*, orderBy('timestamp', 'desc')*/);
+      const q = query(alertsCollectionRef);
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
+        console.log("App.js: Alerts snapshot received.");
         const fetchedAlerts = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         }));
-        // Sort alerts by timestamp in memory (descending)
         fetchedAlerts.sort((a, b) => (b.timestamp?.toDate() || 0) - (a.timestamp?.toDate() || 0));
         setAlerts(fetchedAlerts);
+        setMessage(''); // Clear any previous error messages related to auth
       }, (error) => {
-        console.error("Error fetching alerts:", error);
-        setMessage("Failed to fetch alerts. Check console for details.");
+        console.error("App.js: Error fetching alerts:", error);
+        setMessage("Failed to fetch alerts. Check browser console for details.");
       });
 
-      return () => unsubscribe(); // Clean up snapshot listener
+      return () => {
+        console.log("App.js: Cleaning up alerts snapshot listener.");
+        unsubscribe();
+      };
+    } else {
+      console.log("App.js: DB or Auth not ready for fetching alerts. db:", !!db, "isAuthReady:", isAuthReady);
     }
-  }, [db, isAuthReady]); // Removed appId from dependency array as it's a global constant
+  }, [db, isAuthReady, appId]); // Dependencies for re-running effect
 
   const handleSubmitAlert = async (e) => {
     e.preventDefault();
@@ -121,33 +122,40 @@ function App() {
     }
     if (!db || !userId) {
       setMessage("Firebase not initialized or user not authenticated.");
+      console.error("App.js: Attempted submit without DB or userId. DB:", !!db, "userId:", userId);
       return;
     }
 
     setLoading(true);
     setMessage('');
+    console.log("App.js: Submitting alert to Netlify function...");
 
     try {
-      // Add alert to Firestore using the correct path
-      await addDoc(collection(db, `artifacts/${appId}/public/data/alerts`), {
-        title,
-        description,
-        location,
-        type,
-        severity,
-        userId,
-        timestamp: serverTimestamp(),
+      const response = await fetch('/.netlify/functions/submit-alert', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title, description, location, type, severity, userId }),
       });
 
-      setMessage("Alert submitted successfully!");
-      setTitle('');
-      setDescription('');
-      setLocation('');
-      setType('Physical');
-      setSeverity('Low');
+      const result = await response.json();
+
+      if (response.ok) {
+        setMessage(result.message || "Alert submitted successfully!");
+        setTitle('');
+        setDescription('');
+        setLocation('');
+        setType('Physical');
+        setSeverity('Low');
+        console.log("App.js: Alert submitted successfully via Netlify function.");
+      } else {
+        console.error("App.js: Error from Netlify function:", result.error || result);
+        setMessage(result.error || "Failed to submit alert. Please try again.");
+      }
     } catch (error) {
-      console.error("Error submitting alert:", error);
-      setMessage("Failed to submit alert. Check console for details.");
+      console.error("App.js: Network or unexpected error submitting alert:", error);
+      setMessage("An unexpected error occurred. Check browser console for details.");
     } finally {
       setLoading(false);
     }
