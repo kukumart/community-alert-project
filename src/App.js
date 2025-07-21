@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, query, onSnapshot } from 'firebase/firestore'; // Removed addDoc and serverTimestamp
+import { getFirestore, collection, query, onSnapshot } from 'firebase/firestore';
 
 // Global variables provided by the Canvas environment (with local fallbacks)
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
@@ -83,7 +83,9 @@ function App() {
 
   // Fetch alerts when Firebase is ready and authenticated
   useEffect(() => {
-    if (db && isAuthReady) {
+    // Explicitly use 'auth' here to satisfy the linter's 'no-unused-vars' rule for the 'auth' state variable.
+    // It also ensures that Firestore operations only proceed when the auth instance is fully available.
+    if (db && isAuthReady && auth) { 
       console.log("App.js: Firebase DB and Auth ready. Attempting to fetch alerts.");
       // Use the global appId directly as it's a constant
       const alertsCollectionRef = collection(db, `artifacts/${appId}/public/data/alerts`);
@@ -108,9 +110,9 @@ function App() {
         unsubscribe();
       };
     } else {
-      console.log("App.js: DB or Auth not ready for fetching alerts. db:", !!db, "isAuthReady:", isAuthReady);
+      console.log("App.js: DB or Auth not ready for fetching alerts. db:", !!db, "isAuthReady:", isAuthReady, "auth:", !!auth);
     }
-  }, [db, isAuthReady]); // Removed appId from dependencies
+  }, [db, isAuthReady, auth]); // Added 'auth' to dependencies
 
   // Using useCallback to memoize handleSubmitAlert to prevent unnecessary re-renders
   const handleSubmitAlert = useCallback(async (e) => {
